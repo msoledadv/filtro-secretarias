@@ -48,6 +48,10 @@
                     <select id="filtroOficina" onchange="filtrarTodo()" class="w-full border border-gray-300 rounded px-1 py-1 bg-gray-50 focus:bg-white focus:outline-none text-xs"></select>
                 </div>
                 <div>
+                    <label class="block font-bold text-gray-500 uppercase mb-1">Pagos</label>
+                    <select id="filtroPagos" onchange="filtrarTodo()" class="w-full border border-gray-300 rounded px-1 py-1 bg-gray-50 focus:bg-white focus:outline-none text-xs"></select>
+                </div>
+                <div>
                     <label class="block font-bold text-gray-500 uppercase mb-1">Cargo / Nivel</label>
                     <select id="filtroCargo" onchange="filtrarTodo()" class="w-full border border-gray-300 rounded px-1 py-1 bg-gray-50 focus:bg-white focus:outline-none text-xs">
                         <option value="TODOS">TODOS</option>
@@ -103,6 +107,7 @@
                             <th class="px-3 py-2 w-24">Legajo</th>
                             <th class="px-3 py-2">Nombre Completo</th>
                             <th class="px-3 py-2">Secretaría / Oficina</th>
+                            <th class="px-3 py-2">Pagos</th>
                             <th class="px-3 py-2">Escalafón</th>
                             <th class="px-3 py-2 text-center w-16">Obj.</th>
                             <th class="px-3 py-2 text-center w-16">Acum.</th>
@@ -112,7 +117,7 @@
                     </thead>
                     <tbody id="tablaCuerpo" class="divide-y divide-gray-100 text-gray-700">
                         <tr>
-                            <td colspan="8" class="text-center py-10 text-gray-400 text-sm">
+                            <td colspan="9" class="text-center py-10 text-gray-400 text-sm">
                                 <span class="block text-xl mb-1">📊</span> 
                                 Por favor, selecciona tu archivo <span class="font-semibold text-gray-600">formato xlsx</span> arriba para cargar la nómina.
                             </td>
@@ -176,15 +181,15 @@
                         return;
                     }
 
-                    const encabezados = matriz[0].map(h => String(h).trim().toUpperCase()); // Normalizado a mayúsculas
+                    const encabezados = matriz[0].map(h => String(h).trim().toUpperCase());
                     const idxLegajo = encabezados.indexOf("LEGAJO");
                     const idxNombre = encabezados.indexOf("NOMBRE COMPLETO");
                     const idxSec = encabezados.indexOf("SECRETARIA");
                     const idxOfi = encabezados.indexOf("OFICINA");
+                    const idxPagos = encabezados.indexOf("PAGOS");
                     const idxEsc = encabezados.indexOf("CARGO ESCALAFON");
                     const idxObj = encabezados.indexOf("OBJETIVO");
                     
-                    // Soporte para variaciones de minúsculas/mayúsculas en los encabezados calculados
                     let idxSal = encabezados.indexOf("SALDO_RESTANTE");
                     if(idxSal === -1) idxSal = encabezados.indexOf("SUMA DE SALDO RESTANTE");
                     
@@ -210,6 +215,7 @@
                             NOMBRE_COMPLETO: fila[idxNombre] ? String(fila[idxNombre]).trim() : "Sin Nombre",
                             SECRETARIA: fila[idxSec] ? String(fila[idxSec]).trim() : "s/d",
                             OFICINA: fila[idxOfi] ? String(fila[idxOfi]).trim() : "s/d",
+                            PAGOS: idxPagos !== -1 && fila[idxPagos] !== undefined && String(fila[idxPagos]).trim() !== "" ? String(fila[idxPagos]).trim() : "s/d",
                             CARGO_ESCALAFON: fila[idxEsc] ? String(fila[idxEsc]).trim() : "s/d",
                             OBJETIVO: isNaN(Number(fila[idxObj])) ? 0 : Number(fila[idxObj]),
                             Saldo_Restante: isNaN(Number(fila[idxSal])) ? 0 : Number(fila[idxSal]),
@@ -227,6 +233,7 @@
                     document.getElementById("barraContadores").classList.remove("hidden");
                     document.getElementById("filtroCurso").value = "TODAS";
                     document.getElementById("filtroCargo").value = "TODOS";
+                    document.getElementById("filtroPagos").value = "TODAS"; 
                     filtrarTodo();
                 } catch (err) {
                     console.error(err);
@@ -288,10 +295,12 @@
         function cargarFiltrosDisponibles() {
             const secretarias = ["TODAS", ...new Set(datosProcesados.map(d => String(d.SECRETARIA)).filter(s => s !== '' && s !== 's/d'))];
             const oficinas = ["TODAS", ...new Set(datosProcesados.map(d => String(d.OFICINA)).filter(o => o !== '' && o !== 's/d'))];
+            const listaPagos = ["TODAS", ...new Set(datosProcesados.map(d => String(d.PAGOS)).filter(p => p !== '' && p !== 's/d'))]; 
             const cargosDinamicos = [...new Set(datosProcesados.map(d => String(d.CARGO_ESCALAFON).toUpperCase().trim()).filter(c => c !== '' && c !== 'S/D'))];
 
             document.getElementById("filtroSecretaria").innerHTML = secretarias.map(s => `<option value="${s}">${s}</option>`).join("");
             document.getElementById("filtroOficina").innerHTML = oficinas.map(o => `<option value="${o}">${o}</option>`).join("");
+            document.getElementById("filtroPagos").innerHTML = listaPagos.map(p => `<option value="${p}">${p}</option>`).join(""); 
             
             let htmlCargos = `<option value="TODOS">TODOS</option>
                               <option value="BASICO">BÁSICO (Obj: 0)</option>
@@ -314,6 +323,7 @@
             const cursoSeleccionado = document.getElementById("filtroCurso").value || "TODAS"; 
             const sec = document.getElementById("filtroSecretaria").value || "TODAS";
             const ofi = document.getElementById("filtroOficina").value || "TODAS";
+            const pagoSel = document.getElementById("filtroPagos").value || "TODAS"; 
             const cargoSel = document.getElementById("filtroCargo").value || "TODOS";
             const est = document.getElementById("filtroEstado").value || "TODOS";
 
@@ -326,6 +336,7 @@
                 const matchTxt = String(d.LEGAJO).includes(txt) || nombre.includes(txt);
                 const matchSec = (sec === "TODAS" || d.SECRETARIA === sec);
                 const matchOfi = (ofi === "TODAS" || d.OFICINA === ofi);
+                const matchPago = (pagoSel === "TODAS" || d.PAGOS === pagoSel); 
                 const matchEst = (est === "TODOS" || d.ESTADO === est);
                 
                 let matchCargo = true;
@@ -345,7 +356,7 @@
                     matchCurso = cursosDelEmpleado.some(c => String(c.IDBENEFICIO).trim() === cursoSeleccionado);
                 }
 
-                const cumpleFiltros = matchTxt && matchSec && matchOfi && matchEst && matchCurso && matchCargo;
+                const cumpleFiltros = matchTxt && matchSec && matchOfi && matchPago && matchEst && matchCurso && matchCargo;
 
                 if (cumpleFiltros) {
                     total++;
@@ -371,7 +382,7 @@
             tbody.innerHTML = "";
 
             if (lista.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-gray-400 italic">Ningún empleado coincide con los filtros aplicados.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-gray-400 italic">Ningún empleado coincide con los filtros aplicados.</td></tr>`;
                 return;
             }
 
@@ -392,20 +403,21 @@
                     return `
                         <tr class="${resaltarClase} border-b border-gray-100">
                             <td class="px-3 py-1.5 text-gray-400 font-mono pl-6">N° ${c.indice || 1}</td>
-                            <td class="px-3 py-1.5 text-gray-700" colspan="2"><span class="text-gray-400 font-medium">ID:</span> ${c.IDBENEFICIO} <span class="mx-2 text-gray-300">|</span> <span class="text-gray-400">Fecha:</span> ${fechaLimpia}</td>
+                            <td class="px-3 py-1.5 text-gray-700" colspan="3"><span class="text-gray-400 font-medium">ID:</span> ${c.IDBENEFICIO} <span class="mx-2 text-gray-300">|</span> <span class="text-gray-400">Fecha:</span> ${fechaLimpia}</td>
                             <td class="px-3 py-1.5 text-center text-gray-300" colspan="2">-</td>
                             <td class="px-3 py-1.5 text-center text-blue-600 font-semibold">+${c.CREDITOS}</td>
                             <td class="px-3 py-1.5 text-center text-gray-500 font-mono">Parcial: ${c.Saldo_Restante}</td>
                             <td class="px-3 py-1.5"></td>
                         </tr>
                     `;
-                }).join("") : `<tr class="bg-gray-50/50"><td colspan="8" class="text-left py-1.5 pl-6 text-gray-400 italic">Sin cursos individuales registrados (Estado Base).</td></tr>`;
+                }).join("") : `<tr class="bg-gray-50/50"><td colspan="9" class="text-left py-1.5 pl-6 text-gray-400 italic">Sin cursos individuales registrados (Estado Base).</td></tr>`;
 
                 HTMLAcumulado += `
                     <tr onclick="toggleDetalle('${d.LEGAJO}')" class="hover:bg-gray-50/70 transition cursor-pointer border-b border-gray-100 border-l-2 hover:border-blue-500 border-transparent">
                         <td class="px-3 py-2 font-mono text-blue-600 font-semibold select-none">👁 ${d.LEGAJO}</td>
                         <td class="px-3 py-2 font-semibold text-gray-900">${d.NOMBRE_COMPLETO}</td>
                         <td class="px-3 py-2 text-gray-500 max-w-xs truncate">${d.SECRETARIA} <span class="text-gray-300">/</span> ${d.OFICINA}</td>
+                        <td class="px-3 py-2 text-gray-600 font-medium font-mono">${d.PAGOS}</td> 
                         <td class="px-3 py-2 text-gray-600 truncate">${d.CARGO_ESCALAFON}</td>
                         <td class="px-3 py-2 text-center font-semibold text-gray-900">${d.OBJETIVO}</td>
                         <td class="px-3 py-2 text-center text-blue-600 font-bold">${d.ACUMULADO}</td>
@@ -415,8 +427,12 @@
                         </td>
                     </tr>
                     <tr id="detalle-${d.LEGAJO}" class="hidden bg-gray-50/80">
-                        <td colspan="8" class="p-0">
-                            <table class="w-full border-t border-b border-gray-200/50">
+                        <td colspan="9" class="p-0">
+                            <div class="px-6 py-2 bg-blue-50/50 border-b border-gray-200 text-gray-700 flex items-center gap-2 font-medium">
+                                <span class="text-blue-600 font-bold uppercase tracking-wider text-[10px]">Información de Pagos:</span>
+                                <span class="bg-white border border-gray-300 px-2 py-0.5 rounded text-gray-900 font-mono shadow-sm">${d.PAGOS}</span>
+                            </div>
+                            <table class="w-full border-b border-gray-200/50">
                                 <tbody class="bg-gray-50/40">
                                     ${filasDetalle}
                                 </tbody>
@@ -442,7 +458,8 @@
                     document.getElementById("filtroSecretaria").value || "TODAS",
                     document.getElementById("filtroOficina").value || "TODAS",
                     document.getElementById("filtroCargo").value || "TODOS",
-                    document.getElementById("filtroEstado").value || "TODOS"
+                    document.getElementById("filtroEstado").value || "TODOS",
+                    document.getElementById("filtroPagos").value || "TODAS"
                 ];
 
                 const filtradosParaExportar = datosProcesados.filter(d => {
@@ -451,6 +468,7 @@
                     const matchTxt = String(d.LEGAJO).includes(selectores[0]) || nombre.includes(selectores[0]);
                     const matchSec = (selectores[2] === "TODAS" || d.SECRETARIA === selectores[2]);
                     const matchOfi = (selectores[3] === "TODAS" || d.OFICINA === selectores[3]);
+                    const matchPago = (selectores[6] === "TODAS" || d.PAGOS === selectores[6]);
                     const matchEst = (selectores[5] === "TODOS" || d.ESTADO === selectores[5]);
                     
                     let matchCargo = true;
@@ -470,7 +488,7 @@
                         matchCurso = cursosDelEmpleado.some(c => String(c.IDBENEFICIO).trim() === selectores[1]);
                     }
 
-                    return matchTxt && matchSec && matchOfi && matchEst && matchCurso && matchCargo;
+                    return matchTxt && matchSec && matchOfi && matchPago && matchEst && matchCurso && matchCargo;
                 });
 
                 if (filtradosParaExportar.length === 0) {
@@ -495,6 +513,7 @@
                             rowsReporte.push({
                                 "SECRETARIA": p.SECRETARIA || "S/D",
                                 "OFICINA": p.OFICINA || "S/D",
+                                "PAGOS": p.PAGOS || "S/D",
                                 "LEGAJO": p.LEGAJO || "S/D",
                                 "CARGO ESCALAFON": p.CARGO_ESCALAFON || "S/D",
                                 "NOMBRE COMPLETO": p.NOMBRE_COMPLETO || "S/D",
@@ -512,6 +531,7 @@
                             rowsReporte.push({
                                 "SECRETARIA": p.SECRETARIA || "S/D",
                                 "OFICINA": p.OFICINA || "S/D",
+                                "PAGOS": p.PAGOS || "S/D",
                                 "LEGAJO": p.LEGAJO || "S/D",
                                 "CARGO ESCALAFON": p.CARGO_ESCALAFON || "S/D",
                                 "NOMBRE COMPLETO": p.NOMBRE_COMPLETO || "S/D",
